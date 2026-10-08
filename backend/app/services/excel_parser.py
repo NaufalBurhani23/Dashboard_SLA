@@ -96,6 +96,8 @@ CANONICAL_HEADERS = {
     "jam_penjadwalan_inaktif_2": ["Jam Penjadwalan Arsip Inaktif 2"],
     "tanggal_runner_record_center": ["Tanggal Runner sampai di Record Center", "Tanggal Runner sampai di RC"],
     "jam_runner_record_center": ["Jam Runner sampai di Record Center", "Jam Runner sampai di RC"],
+    "tanggal_registrasi_arsip_generate_barcode": ["Tanggal Registrasi Arsip di Generate Barcode"],
+    "jam_registrasi_arsip_generate_barcode": ["Jam Registrasi Arsip di Generate Barcode"],
 }
 
 
@@ -220,6 +222,7 @@ def parse_registrasi_sheet(file_bytes: bytes, holidays: Optional[List[date]] = N
             pd_d, pd_t = val(row, "tanggal_penjemputan_dokumen"), val(row, "jam_penjemputan_dokumen")
             ti2_d, ti2_t = val(row, "tanggal_penjadwalan_inaktif_2"), val(row, "jam_penjadwalan_inaktif_2")
             rr_d, rr_t = val(row, "tanggal_runner_record_center"), val(row, "jam_runner_record_center")
+            barcode_d, barcode_t = val(row, "tanggal_registrasi_arsip_generate_barcode"), val(row, "jam_registrasi_arsip_generate_barcode")
             records.append({
                 "sumber": _raw(val(row, "sumber")), "status_registrasi": _raw(val(row, "status_registrasi")),
                 "status_inisiasi": _raw(val(row, "status_inisiasi")), "posisi_data": _raw(val(row, "posisi_data")),
@@ -238,6 +241,7 @@ def parse_registrasi_sheet(file_bytes: bytes, holidays: Optional[List[date]] = N
                 "tanggal_penjemputan_dokumen": _as_date(pd_d), "jam_penjemputan_dokumen": _as_time(pd_t),
                 "tanggal_penjadwalan_inaktif_2": _as_date(ti2_d), "jam_penjadwalan_inaktif_2": _as_time(ti2_t),
                 "tanggal_runner_record_center": _as_date(rr_d), "jam_runner_record_center": _as_time(rr_t),
+                "tanggal_registrasi_arsip_generate_barcode": _as_date(barcode_d), "jam_registrasi_arsip_generate_barcode": _as_time(barcode_t),
                 "registration_timestamp": _combine(reg_d, rt), "verification_uf_timestamp": _combine(vuf_d, vuf_t),
                 "verification_uu_timestamp": _combine(vuu_d, vuu_t), "verification_timestamp": _combine(va_d, va_t),
                 "registration_2_timestamp": _combine(r2_d, r2_t), "verification_2_timestamp": _combine(va2_d, va2_t),

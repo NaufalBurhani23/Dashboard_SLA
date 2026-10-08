@@ -81,49 +81,46 @@ class SLA2Calculator:
 
     @classmethod
     def evaluate_sla_2a(cls, row: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        m = cls._norm(row.get("format_arsip"))
-        n = cls._norm(row.get("document_type"))
-        p = cls._as_date(row.get("tanggal_registrasi"))
-        r = cls._as_date(row.get("tanggal_verifikasi_uf"))
-        t = cls._as_date(row.get("tanggal_verifikasi_uu"))
-        x = cls._as_date(row.get("tanggal_penjadwalan_inaktif"))
-        q = row.get("jam_registrasi")
-        y = row.get("jam_penjadwalan_inaktif")
-        b = row.get("status_registrasi")
+        format_arsip = cls._norm(row.get("format_arsip"))
+        document_type = cls._norm(row.get("document_type"))
+        tanggal_registrasi = cls._as_date(row.get("tanggal_registrasi"))
+        tanggal_verifikasi_uf = cls._as_date(row.get("tanggal_verifikasi_uf"))
+        tanggal_verifikasi_uu = cls._as_date(row.get("tanggal_verifikasi_uu"))
+        tanggal_penjadwalan_inaktif = cls._as_date(row.get("tanggal_penjadwalan_inaktif"))
+        jam_registrasi = cls._as_time(row.get("jam_registrasi"))
+        jam_penjadwalan_inaktif = cls._as_time(row.get("jam_penjadwalan_inaktif"))
+        status_registrasi = row.get("status_registrasi")
 
-        # Exact Excel gate: SLA 2A hanya menghitung Format Arsip Fisik.
-        if m != "fisik":
+        if format_arsip != "fisik":
             return {"result": "N/A", "working_days": None, "reason": "SLA 2A: Format Arsip bukan Fisik."}
-
-        # N = Inaktif OR (Aktif and X/Y are both populated)
-        if not (n == "inaktif" or (n == "aktif" and x is not None and y is not None)):
-            return {"result": "N/A", "working_days": None, "reason": "SLA 2A: Document Type tidak memenuhi gate Inaktif atau Aktif dengan X/Y terisi."}
-
-        if p is None:
+        if not (document_type == "inaktif" or (document_type == "aktif" and tanggal_penjadwalan_inaktif is not None and jam_penjadwalan_inaktif is not None)):
+            return {"result": "N/A", "working_days": None, "reason": "SLA 2A: Document Type tidak memenuhi gate Inaktif atau Aktif dengan Tanggal/Jam Penjadwalan Arsip Inaktif terisi."}
+        if tanggal_registrasi is None:
             return {"result": "N/A", "working_days": None, "reason": "SLA 2A: Tanggal Registrasi tidak tersedia."}
 
-        context["registration_date"] = p
-        if not cls._period_gate_2a(p, context):
+        context["registration_date"] = tanggal_registrasi
+        if not cls._period_gate_2a(tanggal_registrasi, context):
             return {"result": "N/A", "working_days": None, "reason": "SLA 2A: Tanggal Registrasi berada di luar period gate."}
 
-        # Excel checks P, Q, X, Y for completeness before evaluating the
-        # working-day calculation. The raw source is addressed by header name
-        # in the parser; there is no dependency on Excel column letters.
-        if p is None or q is None or x is None or y is None:
+        # Keep the Excel behavior under review #5 unchanged for now.
+        # All source fields are addressed by semantic header names.
+        if tanggal_registrasi is None or jam_registrasi is None or tanggal_penjadwalan_inaktif is None or jam_penjadwalan_inaktif is None:
             return {"result": "N/A", "working_days": None, "reason": "SLA 2A: Tanggal/Jam Registrasi dan Tanggal/Jam Penjadwalan Arsip Inaktif harus lengkap."}
 
-        b_norm = cls._norm(b)
-        if r is None and t is None and (b_norm == "disesuaikan command center" or "permohonan" in b_norm):
-            return {"result": "N/A", "working_days": None, "reason": "SLA 2A: R/T kosong dan Status Registrasi = Disesuaikan Command Center atau mengandung Permohonan."}
+        status_registrasi_normalized = cls._norm(status_registrasi)
+        if tanggal_verifikasi_uf is None and tanggal_verifikasi_uu is None and (
+            status_registrasi_normalized == "disesuaikan command center" or "permohonan" in status_registrasi_normalized
+        ):
+            return {"result": "N/A", "working_days": None, "reason": "SLA 2A: Tanggal Verifikasi UF/UU kosong dan Status Registrasi = Disesuaikan Command Center atau mengandung Permohonan."}
 
-        start = t if t is not None else (r if r is not None else p)
-        if start is None or x is None:
-            return {"result": "No", "working_days": None, "reason": "SLA 2A: START atau END tidak lengkap."}
+        start_date = tanggal_verifikasi_uu if tanggal_verifikasi_uu is not None else (tanggal_verifikasi_uf if tanggal_verifikasi_uf is not None else tanggal_registrasi)
+        if start_date is None or tanggal_penjadwalan_inaktif is None:
+            return {"result": "No", "working_days": None, "reason": "SLA 2A: START atau Tanggal Penjadwalan Arsip Inaktif tidak lengkap."}
 
-        working_days = cls.networkdays(start, x, context.get("holidays", [])) - 1
+        working_days = cls.networkdays(start_date, tanggal_penjadwalan_inaktif, context.get("holidays", [])) - 1
         if working_days <= 2:
-            return {"result": "Yes", "working_days": working_days, "reason": f"SLA 2A: NETWORKDAYS(START, X)-1 = {working_days} <= 2."}
-        return {"result": "No", "working_days": working_days, "reason": f"SLA 2A: NETWORKDAYS(START, X)-1 = {working_days} > 2."}
+            return {"result": "Yes", "working_days": working_days, "reason": f"SLA 2A: NETWORKDAYS(START, Tanggal Penjadwalan Arsip Inaktif)-1 = {working_days} <= 2."}
+        return {"result": "No", "working_days": working_days, "reason": f"SLA 2A: NETWORKDAYS(START, Tanggal Penjadwalan Arsip Inaktif)-1 = {working_days} > 2."}
 
     @classmethod
     def _evaluate_2b_path(cls, path_name: str, start: date, end: date, end_time: Optional[time], cutoff: time, holidays: Iterable[date]) -> Dict[str, Any]:
@@ -138,34 +135,47 @@ class SLA2Calculator:
 
     @classmethod
     def evaluate_sla_2b(cls, row: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        m = cls._norm(row.get("format_arsip"))
-        n = cls._norm(row.get("document_type"))
-        p = cls._as_date(row.get("tanggal_registrasi"))
-        z = cls._as_date(row.get("tanggal_registrasi_2"))
-        ah = cls._as_date(row.get("tanggal_gagal_penjemputan"))
-        af = cls._as_date(row.get("tanggal_penolakan_jadwal_penjemputan"))
-        aj = cls._as_date(row.get("tanggal_penjadwalan_inaktif_2"))
-        ak = cls._as_time(row.get("jam_penjadwalan_inaktif_2"))
+        format_arsip = cls._norm(row.get("format_arsip"))
+        document_type = cls._norm(row.get("document_type"))
+        tanggal_registrasi = cls._as_date(row.get("tanggal_registrasi"))
+        tanggal_registrasi_2 = cls._as_date(row.get("tanggal_registrasi_2"))
+        tanggal_gagal_penjemputan = cls._as_date(row.get("tanggal_gagal_penjemputan"))
+        tanggal_penolakan_jadwal_penjemputan = cls._as_date(row.get("tanggal_penolakan_jadwal_penjemputan"))
+        tanggal_penjadwalan_inaktif_2 = cls._as_date(row.get("tanggal_penjadwalan_inaktif_2"))
+        jam_penjadwalan_inaktif_2 = cls._as_time(row.get("jam_penjadwalan_inaktif_2"))
 
-        if m != "fisik":
+        if format_arsip != "fisik":
             return {"result": "N/A", "working_days": None, "reason": "SLA 2B: Format Arsip bukan Fisik."}
-        if not (n == "inaktif" or (n == "aktif" and cls._as_date(row.get("tanggal_penjadwalan_inaktif")) is not None and cls._as_time(row.get("jam_penjadwalan_inaktif")) is not None)):
-            return {"result": "N/A", "working_days": None, "reason": "SLA 2B: Document Type tidak memenuhi gate Inaktif atau Aktif dengan X/Y terisi."}
-        if p is None:
+        if not (document_type == "inaktif" or (document_type == "aktif" and cls._as_date(row.get("tanggal_penjadwalan_inaktif")) is not None and cls._as_time(row.get("jam_penjadwalan_inaktif")) is not None)):
+            return {"result": "N/A", "working_days": None, "reason": "SLA 2B: Document Type tidak memenuhi gate Inaktif atau Aktif dengan Tanggal/Jam Penjadwalan Arsip Inaktif terisi."}
+        if tanggal_registrasi is None:
             return {"result": "N/A", "working_days": None, "reason": "SLA 2B: Tanggal Registrasi tidak tersedia."}
 
-        context["registration_date"] = p
-        if not cls._period_gate_2b(p, context):
+        context["registration_date"] = tanggal_registrasi
+        if not cls._period_gate_2b(tanggal_registrasi, context):
             return {"result": "N/A", "working_days": None, "reason": "SLA 2B: Tanggal Registrasi berada di luar period gate."}
 
         cutoff = context.get("sla2_cutoff") or cls.CUTOFF_DEFAULT
-        if z is not None and aj is not None and ak is not None:
-            return cls._evaluate_2b_path("Z/AA -> AJ/AK", z, aj, ak, cutoff, context.get("holidays", []))
-        if ah is not None and cls._as_time(row.get("jam_gagal_penjemputan")) is not None and aj is not None and ak is not None:
-            return cls._evaluate_2b_path("AH/AI -> AJ/AK", ah, aj, ak, cutoff, context.get("holidays", []))
-        if af is not None and cls._as_time(row.get("jam_penolakan_jadwal_penjemputan")) is not None and aj is not None and ak is not None:
-            return cls._evaluate_2b_path("AF/AG -> AJ/AK", af, aj, ak, cutoff, context.get("holidays", []))
-        return {"result": "N/A", "working_days": None, "reason": "SLA 2B: tidak ada jalur START/END lengkap sesuai urutan Z -> AH -> AF."}
+        if tanggal_registrasi_2 is not None and tanggal_penjadwalan_inaktif_2 is not None and jam_penjadwalan_inaktif_2 is not None:
+            return cls._evaluate_2b_path(
+                "Tanggal Registrasi 2 -> Tanggal Penjadwalan Arsip Inaktif 2",
+                tanggal_registrasi_2, tanggal_penjadwalan_inaktif_2, jam_penjadwalan_inaktif_2, cutoff, context.get("holidays", [])
+            )
+
+        jam_gagal_penjemputan = cls._as_time(row.get("jam_gagal_penjemputan"))
+        if tanggal_gagal_penjemputan is not None and jam_gagal_penjemputan is not None and tanggal_penjadwalan_inaktif_2 is not None and jam_penjadwalan_inaktif_2 is not None:
+            return cls._evaluate_2b_path(
+                "Tanggal Gagal Penjemputan -> Tanggal Penjadwalan Arsip Inaktif 2",
+                tanggal_gagal_penjemputan, tanggal_penjadwalan_inaktif_2, jam_penjadwalan_inaktif_2, cutoff, context.get("holidays", [])
+            )
+
+        jam_penolakan_jadwal_penjemputan = cls._as_time(row.get("jam_penolakan_jadwal_penjemputan"))
+        if tanggal_penolakan_jadwal_penjemputan is not None and jam_penolakan_jadwal_penjemputan is not None and tanggal_penjadwalan_inaktif_2 is not None and jam_penjadwalan_inaktif_2 is not None:
+            return cls._evaluate_2b_path(
+                "Tanggal Penolakan Jadwal Penjemputan -> Tanggal Penjadwalan Arsip Inaktif 2",
+                tanggal_penolakan_jadwal_penjemputan, tanggal_penjadwalan_inaktif_2, jam_penjadwalan_inaktif_2, cutoff, context.get("holidays", [])
+            )
+        return {"result": "N/A", "working_days": None, "reason": "SLA 2B: tidak ada jalur tanggal/jam yang lengkap sesuai urutan proses vendor."}
 
     @classmethod
     def evaluate_vendor(cls, row: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:

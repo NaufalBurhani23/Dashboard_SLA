@@ -4,8 +4,8 @@ Business rules are evaluated only after the corresponding Excel formula has
 run and returned something other than ``Yes``. Manual override never bypasses
 the branch-specific Period Gate.
 
-All conditions use RAW DATA HEADER NAMES represented by the parser, never
-Excel column letters such as X/Y/AW/AY.
+All conditions use RAW DATA HEADER NAMES represented by the parser; no
+Excel column-letter references are used in the business rules.
 
 Pending mentor case:
 - SLA 2B records whose registration date is outside the SLA 2B Period Gate
@@ -77,10 +77,10 @@ def _period_gate(row: Dict[str, Any], context: Dict[str, Any], branch: str) -> b
 
     h5, h6, h8, h9 = context["h5"], context["h6"], context["h8"], context["h9"]
     if branch == "2B":
-        # OR(P>=H9, P=H8) AND P<H6 AND P<>H5
+        # SLA 2B period gate using the semantic Tanggal Registrasi field.
         return (p >= h9 or p == h8) and (p < h6 and p != h5)
 
-    # SLA 2A: OR(P>=H9, P<=H8) AND P<H6 AND P<>H5
+    # SLA 2A period gate using the semantic Tanggal Registrasi field.
     return (p >= h9 or p <= h8) and (p < h6 and p != h5)
 
 

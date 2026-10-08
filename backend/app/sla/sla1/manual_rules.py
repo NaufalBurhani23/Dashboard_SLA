@@ -99,8 +99,8 @@ INACTIVE_WORKFLOW_FIELDS = (
     "jam_jadwal_penjemputan",
     "tanggal_penjemputan_dokumen",
     "jam_penjemputan_dokumen",
-    "tanggal_runner_sampai_record_center",
-    "jam_runner_sampai_record_center",
+    "tanggal_runner_record_center",
+    "jam_runner_record_center",
     "tanggal_registrasi_arsip_generate_barcode",
     "jam_registrasi_arsip_generate_barcode",
 )

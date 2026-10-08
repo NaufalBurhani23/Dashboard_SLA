@@ -79,59 +79,80 @@ class SLA1Calculator:
 
     @classmethod
     def evaluate_sla_1a(cls, row: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
-        m = cls._norm(row.get("format_arsip"))
-        n = cls._norm(row.get("document_type"))
-        p = cls._as_date(row.get("tanggal_registrasi"))
-        q = cls._as_time(row.get("jam_registrasi"))
-        r = cls._as_date(row.get("tanggal_verifikasi_uf"))
-        s = cls._as_time(row.get("jam_verifikasi_uf"))
-        t = cls._as_date(row.get("tanggal_verifikasi_uu"))
-        u = cls._as_time(row.get("jam_verifikasi_uu"))
-        v = cls._as_date(row.get("tanggal_verifikasi_arsip"))
-        w = cls._as_time(row.get("jam_verifikasi_arsip"))
+        format_arsip = cls._norm(row.get("format_arsip"))
+        document_type = cls._norm(row.get("document_type"))
+        tanggal_registrasi = cls._as_date(row.get("tanggal_registrasi"))
+        jam_registrasi = cls._as_time(row.get("jam_registrasi"))
+        tanggal_verifikasi_uf = cls._as_date(row.get("tanggal_verifikasi_uf"))
+        jam_verifikasi_uf = cls._as_time(row.get("jam_verifikasi_uf"))
+        tanggal_verifikasi_uu = cls._as_date(row.get("tanggal_verifikasi_uu"))
+        jam_verifikasi_uu = cls._as_time(row.get("jam_verifikasi_uu"))
+        tanggal_verifikasi_arsip = cls._as_date(row.get("tanggal_verifikasi_arsip"))
+        jam_verifikasi_arsip = cls._as_time(row.get("jam_verifikasi_arsip"))
 
-        if m not in {"fisik", "digital"}:
+        if format_arsip not in {"fisik", "digital"}:
             return {"result": "N/A", "working_days": None, "reason": "Format Arsip bukan fisik/digital."}
-        if m != "digital" and n != "aktif":
+        if format_arsip != "digital" and document_type != "aktif":
             return {"result": "N/A", "working_days": None, "reason": "Format fisik dengan Document Type bukan aktif."}
-        if p is None:
+        if tanggal_registrasi is None:
             return {"result": "N/A", "working_days": None, "reason": "Tanggal Registrasi tidak tersedia."}
-        if cls._period_gate(p, context):
+        if cls._period_gate(tanggal_registrasi, context):
             return {"result": "N/A", "working_days": None, "reason": "Tanggal Registrasi berada di luar periode SLA 1A."}
-        if (v is None and w is None):
+        if tanggal_verifikasi_arsip is None and jam_verifikasi_arsip is None:
             return {"result": "N/A", "working_days": None, "reason": "Tanggal dan Jam Verifikasi Arsip kosong."}
-        if t is None and u is None and r is None and s is None and "permohonan" in cls._norm(row.get("nama_dokumen")):
-            return {"result": "N/A", "working_days": None, "reason": "T/U dan R/S kosong serta Nama Dokumen/Hal mengandung Permohonan."}
 
-        use_tu = False
-        tu_days = None
-        if t is not None and u is not None and v is not None:
-            tu_days = cls.networkdays(t, v, context["holidays"]) - 1
-            use_tu = tu_days >= 0
+        # Exact vendor exception: the Excel formula checks Status Registrasi,
+        # not Nama Dokumen. Header mapping has already converted the raw header
+        # "Status Registrasi" to row["status_registrasi"].
+        status_registrasi = cls._norm(row.get("status_registrasi"))
+        if (
+            tanggal_verifikasi_uu is None
+            and jam_verifikasi_uu is None
+            and tanggal_verifikasi_uf is None
+            and jam_verifikasi_uf is None
+            and (status_registrasi == "disesuaikan command center" or "permohonan" in status_registrasi)
+        ):
+            return {"result": "N/A", "working_days": None, "reason": "Tanggal/Jam Verifikasi UU dan UF kosong serta Status Registrasi mengandung Permohonan."}
 
-        if use_tu:
-            start_date, start_time = t, u
-            start_source = "T/U"
-        elif r is not None and s is not None:
-            start_date, start_time = r, s
-            start_source = "R/S"
+        # Vendor SLA 1A start selection, expressed only with raw header names:
+        # 1) if Tanggal/Jam Verifikasi UU are complete, test their date against
+        #    Tanggal Verifikasi Arsip using NETWORKDAYS-1;
+        # 2) if that candidate is not valid, use Tanggal/Jam Verifikasi UF;
+        # 3) otherwise use Tanggal/Jam Registrasi.
+        use_verifikasi_uu = False
+        verifikasi_uu_working_days = None
+        if tanggal_verifikasi_uu is not None and jam_verifikasi_uu is not None and tanggal_verifikasi_arsip is not None:
+            verifikasi_uu_working_days = cls.networkdays(
+                tanggal_verifikasi_uu, tanggal_verifikasi_arsip, context["holidays"]
+            ) - 1
+            use_verifikasi_uu = verifikasi_uu_working_days >= 0
+
+        if use_verifikasi_uu:
+            start_date = tanggal_verifikasi_uu
+            start_time = jam_verifikasi_uu
+            start_source = "Tanggal/Jam Verifikasi UU"
+        elif tanggal_verifikasi_uf is not None and jam_verifikasi_uf is not None:
+            start_date = tanggal_verifikasi_uf
+            start_time = jam_verifikasi_uf
+            start_source = "Tanggal/Jam Verifikasi UF"
         else:
-            start_date, start_time = p, q
-            start_source = "P/Q"
+            start_date = tanggal_registrasi
+            start_time = jam_registrasi
+            start_source = "Tanggal/Jam Registrasi"
 
-        if v is None:
+        if tanggal_verifikasi_arsip is None:
             return {"result": "N/A", "working_days": None, "reason": "Tanggal Verifikasi Arsip tidak tersedia untuk perhitungan."}
-        if start_date > v:
-            return {"result": "No", "working_days": None, "reason": f"START {start_source} lebih besar dari END Verifikasi Arsip."}
-        if start_date == v and (w or time(0)) < (start_time or time(0)):
-            return {"result": "No", "working_days": None, "reason": f"Tanggal START dan END sama tetapi jam END lebih kecil dari START {start_source}."}
+        if start_date > tanggal_verifikasi_arsip:
+            return {"result": "No", "working_days": None, "reason": f"START {start_source} lebih besar dari Tanggal Verifikasi Arsip."}
+        if start_date == tanggal_verifikasi_arsip and (jam_verifikasi_arsip or time(0)) < (start_time or time(0)):
+            return {"result": "No", "working_days": None, "reason": f"Tanggal START dan END sama tetapi Jam Verifikasi Arsip lebih kecil dari {start_source}."}
 
-        working_days = cls.networkdays(start_date, v, context["holidays"]) - 1
+        working_days = cls.networkdays(start_date, tanggal_verifikasi_arsip, context["holidays"]) - 1
         cutoff = context.get("cutoff") or cls.CUTOFF_DEFAULT
         if working_days <= 1:
-            return {"result": "Yes", "working_days": working_days, "reason": f"NETWORKDAYS(START={start_source}, END=V)-1 = {working_days} <= 1."}
-        if working_days == 2 and (w or time(0)) <= cutoff:
-            return {"result": "Yes", "working_days": working_days, "reason": f"Working days = 2 dan Jam Verifikasi Arsip <= cutoff {cutoff.strftime('%H:%M')}."}
+            return {"result": "Yes", "working_days": working_days, "reason": f"NETWORKDAYS(START={start_source}, END=Tanggal Verifikasi Arsip)-1 = {working_days} <= 1."}
+        if working_days == 2 and (jam_verifikasi_arsip or time(0)) <= cutoff:
+            return {"result": "Yes", "working_days": working_days, "reason": f"START={start_source}; Working days = 2 dan Jam Verifikasi Arsip <= cutoff {cutoff.strftime('%H:%M')}."}
         return {"result": "No", "working_days": working_days, "reason": f"Working days = {working_days} dan tidak memenuhi cutoff SLA 1A."}
 
     @classmethod

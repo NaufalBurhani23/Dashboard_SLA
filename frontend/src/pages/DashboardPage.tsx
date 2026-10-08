@@ -162,10 +162,10 @@ export default function DashboardPage() {
   const load = useCallback(async () => {
     try {
       setError('');
-      const base = await fetchDashboard({ sla: sla === 'SLA 4' ? 'ALL' : sla, startDate: start, endDate: end, trendUnit });
+      const base = await fetchDashboard({ sla: sla === 'SLA 4' ? 'ALL' : sla, startDate: start, endDate: end, tableUnit, trendUnit });
       setData(base);
       try {
-        const s4 = await fetchSLA4Dashboard({ startDate: start, endDate: end, trendUnit });
+        const s4 = await fetchSLA4Dashboard({ startDate: start, endDate: end, tableUnit, trendUnit });
         setSla4(s4);
       } catch (err) {
         console.warn('SLA 4 dashboard belum tersedia:', err);
@@ -175,7 +175,7 @@ export default function DashboardPage() {
       console.error(err);
       setError('Gagal mengambil data dashboard. Pastikan backend berjalan.');
     }
-  }, [sla, start, end, trendUnit]);
+  }, [sla, start, end, tableUnit, trendUnit]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -226,7 +226,7 @@ export default function DashboardPage() {
       existing.sla4 = toUnitStat(row);
       map.set(row.unit, existing);
     }
-    return [...map.values()];
+    return [...map.values()].filter((row) => !tableUnit || row.unit === tableUnit);
   })();
 
   const selectedRows = selected === 'SLA 4' ? (sla4?.unit_table.filter((r) => !tableUnit || r.unit === tableUnit).map((r) => ({ unit: r.unit, total: r.total, denominator: r.denominator, on_time: r.on_time, out_of_date: r.out_of_date, incomplete: r.incomplete, percentage: r.percentage })) ?? []) : selected === 'SLA 1' || selected === 'SLA 2' ? (data.unit_table.filter((r) => !tableUnit || r.unit === tableUnit)) : combinedUnits;

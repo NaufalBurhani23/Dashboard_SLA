@@ -9,7 +9,7 @@ class SLA4Calculator:
     """Named-header SLA 4A/4B implementation.
 
     The class intentionally never references Excel column letters. The input row
-    uses semantic field names supplied by sla4_parser.py.
+    uses semantic field names supplied by services.excel_parser.py.
     """
 
     CUTOFF = time(23, 59)
@@ -80,7 +80,7 @@ class SLA4Calculator:
 
     @staticmethod
     def period_gate(schedule_date: date, registration_date: date | None, holidays: Iterable[date]) -> bool:
-        """Vendor gate based on schedule date AD and report-month reference days."""
+        """Vendor gate based on Tanggal Jadwal Penjemputan and report-month reference days."""
         if registration_date is None:
             return True
         period_year, period_month = registration_date.year, registration_date.month
@@ -89,9 +89,9 @@ class SLA4Calculator:
         prev_year, prev_month = (period_year - 1, 12) if period_month == 1 else (period_year, period_month - 1)
         previous_1, previous_2, _ = SLA4Calculator._last_working_days(prev_year, prev_month, holiday_set)
 
-        # Equivalent shape to the vendor formula:
-        # OR(AD=previous H-1, AD>=previous H-2)
-        # AND(AD<current H-2, AD<>current H-1)
+        # Equivalent shape to the vendor formula, expressed only with
+        # semantic fields: Tanggal Jadwal Penjemputan is compared with the
+        # previous/current last-working-day reference values.
         return (
             (schedule_date == previous_1 or schedule_date >= previous_2)
             and schedule_date < current_2
