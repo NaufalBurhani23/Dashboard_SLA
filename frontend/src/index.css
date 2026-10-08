@@ -1,0 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+/* Tema "buku register arsip" — tinta navy di atas kertas abu-dingin, aksen
+   kuningan seperti stempel/segel arsip. Dipakai lewat utility Tailwind v4
+   (mis. bg-ink, text-brass, bg-paper) di seluruh komponen. */
+@theme {
+  --color-paper: #F4F5F7;
+  --color-surface: #FFFFFF;
+  --color-ink: #1B2A4A;
+  --color-ink-soft: #3B4A6B;
+  --color-rule: #DCE0E8;
+  --color-slate-muted: #64748B;
+  --color-brass: #A9793F;
+  --color-brass-soft: #F3E9DA;
+  --color-status-good: #15803D;
+  --color-status-goodbg: #E7F5EC;
+  --color-status-warn: #B45309;
+  --color-status-warnbg: #FBF0DF;
+  --color-status-bad: #B91C1C;
+  --color-status-badbg: #FBE9E9;
+
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-serif: "IBM Plex Serif", Georgia, serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

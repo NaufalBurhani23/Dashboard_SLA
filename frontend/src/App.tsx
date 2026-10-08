@@ -1,0 +1,2 @@
+import {BrowserRouter,Routes,Route} from 'react-router-dom'; import DashboardPage from './pages/DashboardPage'; import TraceabilityPage from './pages/TraceabilityPage'; import HolidayCalendarPage from './pages/HolidayCalendarPage';
+export default function App(){return <BrowserRouter><Routes><Route path="/" element={<DashboardPage/>}/><Route path="/traceability" element={<TraceabilityPage/>}/><Route path="/holidays" element={<HolidayCalendarPage/>}/></Routes></BrowserRouter>}
