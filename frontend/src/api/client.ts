@@ -17,5 +17,7 @@ export async function previewWorkdays(startDate:string,endDate:string){return (a
 
 export interface DashboardSlaSummary extends Accumulation { }
 export interface DashboardUnitStat { total:number; denominator:number; on_time:number; out_of_date:number; incomplete:number; percentage:number; }
-export interface DashboardUnitRow { unit:string; sla1?:DashboardUnitStat; sla2?:DashboardUnitStat; total?:number; denominator?:number; on_time?:number; out_of_date?:number; incomplete?:number; percentage?:number; }
-export interface DashboardPayload { selected_sla:'ALL'|'SLA 1'|'SLA 2'; available_units:string[]; summaries:Record<'SLA 1'|'SLA 2',DashboardSlaSummary>; unit_table:DashboardUnitRow[]; ranking:Ranking; rankings:Record<'SLA 1'|'SLA 2',Ranking>; trend:TrendPoint[]; trends:Record<'SLA 1'|'SLA 2',TrendPoint[]>; trend_sla:'SLA 1'|'SLA 2'; }
+export interface DashboardUnitRow { unit:string; sla1?:DashboardUnitStat; sla2?:DashboardUnitStat; sla4?:DashboardUnitStat; total?:number; denominator?:number; on_time?:number; out_of_date?:number; incomplete?:number; percentage?:number; }
+export interface DashboardPayload { selected_sla:'ALL'|'SLA 1'|'SLA 2'|'SLA 4'; available_units:string[]; summaries:Record<'SLA 1'|'SLA 2',DashboardSlaSummary>; unit_table:DashboardUnitRow[]; ranking:Ranking; rankings:Record<'SLA 1'|'SLA 2',Ranking>; trend:TrendPoint[]; trends:Record<'SLA 1'|'SLA 2',TrendPoint[]>; trend_sla:'SLA 1'|'SLA 2'; }
+
+export interface UnifiedDashboardPayload extends DashboardPayload { summaries: Record<'SLA 1'|'SLA 2'|'SLA 4', DashboardSlaSummary>; rankings: Record<'SLA 1'|'SLA 2'|'SLA 4', Ranking>; trends: Record<'SLA 1'|'SLA 2'|'SLA 4', TrendPoint[]>; trend_sla:'SLA 1'|'SLA 2'|'SLA 4'; }

@@ -1,4 +1,4 @@
-# Dashboard Monitoring SLA — SLA 1 + SLA 2
+# Dashboard Monitoring SLA — SLA 1 + SLA 2 + SLA 4
 
 Versi ini mempertahankan perhitungan **SLA 1** dan menambahkan engine **SLA 2A + SLA 2B** berdasarkan rumus Excel vendor dan pola manual yang sudah di-ACC.
 
@@ -77,7 +77,7 @@ Setiap jalur menghitung `NETWORKDAYS(START, AJ, holiday) - 1`. Nilai `< 2` = Yes
 Semua pola manual SLA 2 wajib menghormati **period gate**. Pola khusus record yang masih menunggu validasi mentor **tidak dibuat sebagai rule**.
 
 ## Raw Excel dan Header Mapping
-Parser memetakan berdasarkan nama header, bukan huruf Excel. Field SLA 2 yang dibaca antara lain:
+Semua engine SLA menggunakan **parser bersama** di `backend/app/services/excel_parser.py`, sehingga kalkulator menerima field semantik dan tidak bergantung pada huruf/posisi kolom Excel. Untuk tahap sekarang, SLA 4 sengaja mengikuti parser/input yang sama dengan SLA 1/SLA 2 seperti yang disepakati sebelum validasi struktur raw SLA 4 dengan mentor. Setelah struktur raw dikonfirmasi, perubahan dilakukan di satu lapisan header mapping bersama agar dapat dipakai seluruh SLA, bukan membuat parser berbeda-beda per SLA. Field yang sudah dikenali antara lain:
 - Tanggal/Jam Registrasi
 - Tanggal/Jam Verifikasi UF dan UU
 - Tanggal/Jam Penjadwalan Arsip Inaktif
@@ -107,3 +107,25 @@ Unit test SLA 2 tersedia di `backend/tests/test_sla2_flow.py`. Test mencakup for
 Mode `Semua SLA` hanya menampilkan akumulasi SLA 1/SLA 2 dan tabel Capaian SLA per Unit. Status Sinkronisasi, chart, ranking, dan tren harian hanya tampil ketika `SLA 1` atau `SLA 2` dipilih.
 
 SLA 1 memakai implementasi baseline 1 Oktober yang sudah direvalidasi. SLA 2 memakai rumus SLA 2A/SLA 2B + 3 pola manual SLA 2A dan 9 pola manual SLA 2B yang telah di-ACC. Rule baru untuk kasus pending mentor tidak digeneralisasi.
+
+
+## Struktur SLA 4
+SLA 4 ditempatkan sebagai domain terpisah di `backend/app/sla/sla4/`: calculator dan service master unit kawasan. Parser khusus SLA 4 disimpan sebagai kode yang ditunda, tetapi **tidak dipakai pada import saat ini**. Import SLA 4 menggunakan parser bersama `app/services/excel_parser.py` agar konsisten dengan SLA 1/SLA 2. Endpoint API tetap berada di `backend/app/api/sla4_routes.py`, sedangkan model tetap terpusat di `backend/app/models/`.
+
+Frontend SLA 4 menggunakan layout yang sama dengan dashboard SLA 1/SLA 2 dan menambahkan halaman Master Unit SLA 4 serta Kalender Hari Libur.
+
+### Master Unit SLA 4
+Master unit menentukan `Pusat/Pendukung`, `Dalam Kawasan/Luar Kawasan`, periode berlaku, dan status aktif. Target SLA 4 menggunakan H+1 untuk Dalam Kawasan dan H+2 untuk Luar Kawasan.
+
+### Kalender Hari Libur
+SLA 4 menggunakan kalender dashboard sebagai single source of truth. Tambah/edit/hapus menghasilkan version baru; perhitungan baru mengambil latest version pada rentang tanggal yang digunakan.
+
+### Database
+File database SQLite development sengaja tidak disertakan dalam paket source. Saat backend dijalankan, database beserta tabel akan dibuat ulang melalui SQLAlchemy.
+
+
+### Revisi Navigasi Dashboard
+- Menu utama sekarang **Dashboard SLA** dan menampung SLA 1, SLA 2, dan SLA 4 pada satu halaman.
+- Route `/sla4` diarahkan kembali ke `/` agar bookmark lama tetap aman.
+- Menu **Master Unit** menggantikan label Master Unit SLA 4.
+- Import Raw Excel dari Dashboard mencoba memproses SLA 1/2 dan SLA 4 dalam satu aksi.

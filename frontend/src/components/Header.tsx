@@ -1,4 +1,19 @@
-import {useEffect,useState} from 'react'; import {Link,useLocation} from 'react-router-dom';
-const NAV=[{to:'/',label:'Dashboard SLA 1'},{to:'/traceability',label:'Detail Traceability'},{to:'/holidays',label:'Kalender Hari Libur'}];
-const H=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu']; const B=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-export default function Header(){const loc=useLocation();const[now,setNow]=useState(new Date());useEffect(()=>{const t=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(t)},[]);const p=(n:number)=>String(n).padStart(2,'0');return <header className="bg-ink text-white shadow-sm"><div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center"><div className="flex items-center gap-4"><div className="bg-white p-2 rounded-sm"><span className="text-ink font-black text-xl">PLN</span></div><div><h1 className="font-serif text-xl font-semibold">Dashboard Monitoring SLA Operational</h1><p className="text-xs text-white/60">PT PLN (Persero) — Archive Service Hub Platform</p></div></div><div className="text-right hidden sm:block"><p className="text-xs text-white/60">{H[now.getDay()]}, {now.getDate()} {B[now.getMonth()]} {now.getFullYear()}</p><p className="text-sm font-semibold tabular-nums text-brass-soft">{p(now.getHours())}:{p(now.getMinutes())}:{p(now.getSeconds())} WIB</p></div></div><nav className="max-w-7xl mx-auto px-6 flex gap-1 border-t border-white/10">{NAV.map(x=><Link key={x.to} to={x.to} className={`px-3 py-2.5 text-sm border-b-2 -mb-px ${loc.pathname===x.to?'border-brass text-white font-medium':'border-transparent text-white/60 hover:text-white'}`}>{x.label}</Link>)}</nav></header>}
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+
+const NAV = [
+  { to: '/', label: 'Dashboard SLA' },
+  { to: '/units', label: 'Master Unit' },
+  { to: '/traceability', label: 'Detail Traceability' },
+  { to: '/holidays', label: 'Kalender Hari Libur' },
+];
+const H = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+const B = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+export default function Header() {
+  const loc = useLocation();
+  const [now, setNow] = useState(new Date());
+  useEffect(() => { const timer = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(timer); }, []);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return <header className="bg-ink text-white shadow-sm"><div className="max-w-7xl mx-auto px-6 py-5 flex justify-between items-center"><div className="flex items-center gap-4"><div className="bg-white p-2 rounded-sm"><span className="text-ink font-black text-xl">PLN</span></div><div><h1 className="font-serif text-xl font-semibold">Dashboard Monitoring SLA Operational</h1><p className="text-xs text-white/60">PT PLN (Persero) — Archive Service Hub Platform</p></div></div><div className="text-right hidden sm:block"><p className="text-xs text-white/60">{H[now.getDay()]}, {now.getDate()} {B[now.getMonth()]} {now.getFullYear()}</p><p className="text-sm font-semibold tabular-nums text-brass-soft">{p(now.getHours())}:{p(now.getMinutes())}:{p(now.getSeconds())} WIB</p></div></div><nav className="max-w-7xl mx-auto px-6 flex gap-1 border-t border-white/10 flex-wrap">{NAV.map(x => <Link key={x.to} to={x.to} className={`px-3 py-2.5 text-sm border-b-2 -mb-px ${loc.pathname === x.to ? 'border-brass text-white font-medium' : 'border-transparent text-white/60 hover:text-white'}`}>{x.label}</Link>)}</nav></header>;
+}
