@@ -103,13 +103,13 @@ class SLA3Calculator:
         if not cls._period_gate(p, context):
             return {"result": "N/A", "working_days": None, "reason": "SLA 3A: Tanggal Registrasi berada di luar period gate."}
 
-        # Short-Circuit Yes: Jika field Tanggal Penjadwalan Arsip Inaktif 2 (Tanggal Penjadwalan Arsip Inaktif 2) terisi
-        if aj is not None:
-            return {"result": "Yes", "working_days": None, "reason": "SLA 3A: Tanggal Penjadwalan Inaktif 2 (Tanggal Penjadwalan Arsip Inaktif 2) terisi (Short-circuit Yes)."}
-
-        # Pastikan START dan END tersedia
+        # Prasyarat start/end harus tersedia sebelum short-circuit AJ.
         if x is None or ad is None:
-            return {"result": "N/A", "working_days": None, "reason": "SLA 3A: Tanggal Penjadwalan Inaktif (Tanggal Penjadwalan Arsip Inaktif) atau Tanggal Jadwal Penjemputan (Tanggal Jadwal Penjemputan) kosong."}
+            return {"result": "N/A", "working_days": None, "reason": "SLA 3A: Tanggal Penjadwalan Inaktif atau Tanggal Jadwal Penjemputan kosong."}
+
+        # Short-circuit Yes jika Tanggal Penjadwalan Arsip Inaktif 2 tersedia.
+        if aj is not None:
+            return {"result": "Yes", "working_days": None, "reason": "SLA 3A: Tanggal Penjadwalan Arsip Inaktif 2 terisi (Short-circuit Yes)."}
 
         # Kalkulasi
         working_days = cls.networkdays(x, ad, context.get("holidays", [])) - 1
