@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+*.db
+backend/sla_db.db
+.env
+node_modules/
