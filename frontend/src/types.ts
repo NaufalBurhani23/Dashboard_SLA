@@ -6,6 +6,9 @@ export interface SLARecord {
   sla2a_result:string|null; sla2b_result:string|null; sla2_final_result:string|null; sla2_manual_result:string|null;
   sla2_decision_source:string|null; sla2_manual_rule:string|null; sla2_working_days:number|null; sla2a_working_days:number|null; sla2b_working_days:number|null;
   sla2_flow_stage:string|null; sla2_reason:string|null;
+  sla3a_result:string|null; sla3b_result:string|null; sla3_final_result:string|null; sla3_manual_result:string|null;
+  sla3_decision_source:string|null; sla3_manual_rule:string|null; sla3_working_days:number|null;
+  sla3a_working_days:number|null; sla3b_working_days:number|null; sla3_flow_stage:string|null; sla3_reason:string|null;
   registration_timestamp:string|null; verification_uf_timestamp:string|null; verification_uu_timestamp:string|null; verification_timestamp:string|null;
   registration_2_timestamp:string|null; verification_2_timestamp:string|null; status:SLAStatus; incomplete_reason:string|null;
   holiday_calendar_version:string|null; reporting_period:string|null;

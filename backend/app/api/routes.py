@@ -14,6 +14,7 @@ from app.models.holiday import HolidayCalendar
 from app.services.excel_parser import parse_registrasi_sheet
 from app.sla.sla1.calculator import SLA1Calculator
 from app.sla.sla2.calculator import SLA2Calculator
+from app.sla.sla3.calculator import SLA3Calculator
 from app.api.dashboard_metrics import build_dashboard
 
 router = APIRouter()
@@ -55,7 +56,7 @@ def _default_period_from_records(records):
 
 @router.get('/health')
 def health():
-    return {"status": "ok", "scope": "SLA 1 + SLA 2"}
+    return {"status": "ok", "scope": "SLA 1 + SLA 2 + SLA 3"}
 
 
 @router.post('/import')
@@ -101,6 +102,9 @@ async def import_excel(file: UploadFile = File(...), db: Session = Depends(get_d
     sla2_counts = {"Yes": 0, "No": 0, "N/A": 0}
     sla2a_counts = {"Yes": 0, "No": 0, "N/A": 0}
     sla2b_counts = {"Yes": 0, "No": 0, "N/A": 0}
+    sla3_counts = {"Yes": 0, "No": 0, "N/A": 0}
+    sla3a_counts = {"Yes": 0, "No": 0, "N/A": 0}
+    sla3b_counts = {"Yes": 0, "No": 0, "N/A": 0}
 
     for rec in raw_records:
         # SLA 1 tetap dihitung seperti sebelumnya.
@@ -110,10 +114,18 @@ async def import_excel(file: UploadFile = File(...), db: Session = Depends(get_d
         # SLA 2A dan SLA 2B dihitung paralel sesuai dua kolom formula Excel.
         evaluation2 = SLA2Calculator.evaluate_vendor(rec, context)
         result2 = evaluation2["result"]
+
+        # SLA 3A + SLA 3B + final fallback/manual logic.
+        evaluation3 = SLA3Calculator.evaluate_vendor(rec, context)
+        result3 = evaluation3["result"]
+
         sla1_counts[result1] += 1
         sla2_counts[result2] += 1
         sla2a_counts[evaluation2["sla_2a_result"]] += 1
         sla2b_counts[evaluation2["sla_2b_result"]] += 1
+        sla3_counts[result3] += 1
+        sla3a_counts[evaluation3.get("sla_3a_result", "N/A")] += 1
+        sla3b_counts[evaluation3.get("sla_3b_result", "N/A")] += 1
 
         mappings.append({
             "nomor_registrasi": rec.get("nomor_registrasi"), "nama_dokumen": rec.get("nama_dokumen"), "unit": rec.get("unit"),
@@ -145,6 +157,12 @@ async def import_excel(file: UploadFile = File(...), db: Session = Depends(get_d
             "sla2_working_days": evaluation2.get("working_days"),
             "sla2a_working_days": evaluation2.get("sla_2a_working_days"), "sla2b_working_days": evaluation2.get("sla_2b_working_days"),
             "sla2_flow_stage": evaluation2.get("flow_stage"), "sla2_reason": evaluation2.get("reason"),
+            "sla3a_result": evaluation3.get("sla_3a_result"), "sla3b_result": evaluation3.get("sla_3b_result"),
+            "sla3_final_result": result3, "sla3_manual_result": evaluation3.get("manual_result"),
+            "sla3_decision_source": evaluation3.get("decision_source"), "sla3_manual_rule": evaluation3.get("manual_rule"),
+            "sla3_working_days": evaluation3.get("working_days"),
+            "sla3a_working_days": evaluation3.get("sla_3a_working_days"), "sla3b_working_days": evaluation3.get("sla_3b_working_days"),
+            "sla3_flow_stage": evaluation3.get("flow_stage"), "sla3_reason": evaluation3.get("reason"),
             "holiday_calendar_version": context["holiday_calendar_version"],
             "flow_stage": evaluation1.get("flow_stage"),
             "reporting_period": period,
@@ -153,11 +171,12 @@ async def import_excel(file: UploadFile = File(...), db: Session = Depends(get_d
     db.bulk_insert_mappings(SLARecord, mappings)
     db.commit()
     return {
-        "message": f"Berhasil memproses {len(raw_records)} baris raw data dengan perhitungan SLA 1 dan SLA 2 periode {period}.",
+        "message": f"Berhasil memproses {len(raw_records)} baris raw data dengan perhitungan SLA 1, SLA 2, dan SLA 3 periode {period}.",
         "records": len(raw_records), "period": period, "holiday_calendar_version": context["holiday_calendar_version"],
         "holidays_used": len(holidays),
         "sla1": sla1_counts,
         "sla2": {"final": sla2_counts, "sla2a": sla2a_counts, "sla2b": sla2b_counts},
+        "sla3": {"final": sla3_counts, "sla3a": sla3a_counts, "sla3b": sla3b_counts},
     }
 
 

@@ -21,7 +21,7 @@ ensure_schema()
 with SessionLocal() as _db:
     seed_default_units(_db)
 
-app = FastAPI(title="SLA Monitoring Dashboard — SLA 1 + SLA 2 + SLA 4")
+app = FastAPI(title="SLA Monitoring Dashboard — SLA 1 + SLA 2 + SLA 3 + SLA 4")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

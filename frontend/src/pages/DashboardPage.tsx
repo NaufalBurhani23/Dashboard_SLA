@@ -18,13 +18,13 @@ const ZERO_RANKING: Ranking = { top5: [], bottom5: [] };
 
 const EMPTY: DashboardPayload = {
   selected_sla: 'ALL', available_units: [],
-  summaries: { 'SLA 1': ZERO_SUMMARY, 'SLA 2': ZERO_SUMMARY },
+  summaries: { 'SLA 1': ZERO_SUMMARY, 'SLA 2': ZERO_SUMMARY, 'SLA 3': ZERO_SUMMARY },
   unit_table: [], ranking: ZERO_RANKING,
-  rankings: { 'SLA 1': ZERO_RANKING, 'SLA 2': ZERO_RANKING },
-  trend: [], trends: { 'SLA 1': [], 'SLA 2': [] }, trend_sla: 'SLA 1',
+  rankings: { 'SLA 1': ZERO_RANKING, 'SLA 2': ZERO_RANKING, 'SLA 3': ZERO_RANKING },
+  trend: [], trends: { 'SLA 1': [], 'SLA 2': [], 'SLA 3': [] }, trend_sla: 'SLA 1',
 };
 
-const SLA_CODES = ['SLA 1', 'SLA 2', 'SLA 4'] as const;
+const SLA_CODES = ['SLA 1', 'SLA 2', 'SLA 3', 'SLA 4'] as const;
 type SelectedSla = 'ALL' | typeof SLA_CODES[number];
 
 const fmt = (n: number) => new Intl.NumberFormat('id-ID').format(n || 0);
@@ -100,8 +100,10 @@ function StatusSync({ sla, summary }: { sla: typeof SLA_CODES[number]; summary: 
   );
 }
 
-function UnitTable({ rows, sla, unit, setUnit, all }: { rows: DashboardUnitRow[]; sla: SelectedSla; unit: string; setUnit: (v: string) => void; all: boolean }) {
-  const options = [...new Set(rows.map((row) => row.unit))].sort((a, b) => a.localeCompare(b));
+function UnitTable({ rows, sla, unit, setUnit, all, availableUnits }: { rows: DashboardUnitRow[]; sla: SelectedSla; unit: string; setUnit: (v: string) => void; all: boolean; availableUnits: string[] }) {
+  // Keep every unit in the selector even when the table is currently filtered
+  // to a single unit, so users can switch directly from one unit to another.
+  const options = [...new Set(availableUnits)].sort((a, b) => a.localeCompare(b));
   const stat = (row: DashboardUnitRow, code: typeof SLA_CODES[number]) => {
     const key = code === 'SLA 1' ? 'sla1' : code === 'SLA 2' ? 'sla2' : 'sla4';
     // SLA 4 rows can arrive either in the unified shape (row.sla4) or in the
@@ -188,6 +190,7 @@ export default function DashboardPage() {
       if (r12.status === 'fulfilled') {
         messages.push(`SLA 1 Yes/No/N/A: ${r12.value.sla1?.Yes ?? '-'} / ${r12.value.sla1?.No ?? '-'} / ${r12.value.sla1?.['N/A'] ?? '-'}`);
         messages.push(`SLA 2 Final Yes/No/N/A: ${r12.value.sla2?.final?.Yes ?? '-'} / ${r12.value.sla2?.final?.No ?? '-'} / ${r12.value.sla2?.final?.['N/A'] ?? '-'}`);
+        messages.push(`SLA 3 Final Yes/No/N/A: ${r12.value.sla3?.final?.Yes ?? '-'} / ${r12.value.sla3?.final?.No ?? '-'} / ${r12.value.sla3?.final?.['N/A'] ?? '-'}`);
       } else messages.push('SLA 1/2: gagal diproses.');
       if (r4.status === 'fulfilled') messages.push(`SLA 4 Final Yes/No/N/A: ${r4.value.final.Yes} / ${r4.value.final.No} / ${r4.value.final['N/A']}`);
       else messages.push('SLA 4: gagal diproses.');
@@ -200,20 +203,23 @@ export default function DashboardPage() {
   function resetFilters() { setSla('ALL'); setStart(''); setEnd(''); setTableUnit(''); setTrendUnit(''); }
 
   const selected = sla;
-  const activeCode: typeof SLA_CODES[number] = selected === 'SLA 4' ? 'SLA 4' : (selected === 'SLA 1' || selected === 'SLA 2' ? selected : 'SLA 1');
+  const activeCode: typeof SLA_CODES[number] = selected === 'ALL' ? 'SLA 1' : selected;
   const summaries: Record<typeof SLA_CODES[number], DashboardSlaSummary> = {
     'SLA 1': data.summaries['SLA 1'] ?? ZERO_SUMMARY,
     'SLA 2': data.summaries['SLA 2'] ?? ZERO_SUMMARY,
+    'SLA 3': data.summaries['SLA 3'] ?? ZERO_SUMMARY,
     'SLA 4': sla4 ? toSummary(sla4.summary) : ZERO_SUMMARY,
   };
   const rankings: Record<typeof SLA_CODES[number], Ranking> = {
     'SLA 1': data.rankings['SLA 1'] ?? ZERO_RANKING,
     'SLA 2': data.rankings['SLA 2'] ?? ZERO_RANKING,
+    'SLA 3': data.rankings['SLA 3'] ?? ZERO_RANKING,
     'SLA 4': sla4 ? rankingFrom4(sla4) : ZERO_RANKING,
   };
   const trends: Record<typeof SLA_CODES[number], TrendPoint[]> = {
     'SLA 1': data.trends['SLA 1'] ?? [],
     'SLA 2': data.trends['SLA 2'] ?? [],
+    'SLA 3': data.trends['SLA 3'] ?? [],
     'SLA 4': sla4 ? toTrend(sla4.trend) : [],
   };
 
@@ -229,7 +235,7 @@ export default function DashboardPage() {
     return [...map.values()].filter((row) => !tableUnit || row.unit === tableUnit);
   })();
 
-  const selectedRows = selected === 'SLA 4' ? (sla4?.unit_table.filter((r) => !tableUnit || r.unit === tableUnit).map((r) => ({ unit: r.unit, total: r.total, denominator: r.denominator, on_time: r.on_time, out_of_date: r.out_of_date, incomplete: r.incomplete, percentage: r.percentage })) ?? []) : selected === 'SLA 1' || selected === 'SLA 2' ? (data.unit_table.filter((r) => !tableUnit || r.unit === tableUnit)) : combinedUnits;
+  const selectedRows = selected === 'SLA 4' ? (sla4?.unit_table.filter((r) => !tableUnit || r.unit === tableUnit).map((r) => ({ unit: r.unit, total: r.total, denominator: r.denominator, on_time: r.on_time, out_of_date: r.out_of_date, incomplete: r.incomplete, percentage: r.percentage })) ?? []) : selected === 'SLA 1' || selected === 'SLA 2' || selected === 'SLA 3' ? (data.unit_table.filter((r) => !tableUnit || r.unit === tableUnit)) : combinedUnits;
   const selectedTrend = trends[activeCode];
   const selectedRanking = rankings[activeCode];
 
@@ -239,7 +245,7 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-6 py-7 space-y-6">
         <section className="bg-surface border border-rule rounded-sm p-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div><h2 className="font-serif text-xl font-semibold">Dashboard Monitoring SLA</h2><p className="text-xs text-slate-muted mt-1">SLA 1 • SLA 2 • SLA 4 • Raw Excel dipetakan berdasarkan nama header.</p></div>
+            <div><h2 className="font-serif text-xl font-semibold">Dashboard Monitoring SLA</h2><p className="text-xs text-slate-muted mt-1">SLA 1 • SLA 2 • SLA 3 • SLA 4 • Raw Excel dipetakan berdasarkan nama header.</p></div>
             <div className="flex gap-2"><label className="cursor-pointer border border-rule px-4 py-2 text-xs font-medium rounded-sm hover:bg-paper">{file ? file.name : 'Pilih Raw Excel'}<input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => setFile(e.target.files?.[0] || null)} /></label><button onClick={upload} disabled={loading} className="bg-ink text-white px-4 py-2 text-xs rounded-sm disabled:opacity-50">{loading ? 'Memproses...' : 'Import Raw Excel'}</button><button onClick={() => window.open(exportUrl({ startDate: start, endDate: end }), '_blank')} className="border border-brass text-brass px-4 py-2 text-xs rounded-sm">Export</button></div>
           </div>
         </section>
@@ -248,25 +254,25 @@ export default function DashboardPage() {
 
         <section className="bg-surface border border-rule rounded-sm p-5">
           <div className="flex flex-wrap items-end gap-4">
-            <div><label className="block text-[11px] font-medium text-slate-muted mb-1">Pilih SLA</label><select value={sla} onChange={(e) => { setSla(e.target.value as SelectedSla); setTableUnit(''); setTrendUnit(''); }} className="border border-rule rounded-sm px-3 py-2 text-sm min-w-48"><option value="ALL">Semua SLA</option><option value="SLA 1">SLA 1</option><option value="SLA 2">SLA 2</option><option value="SLA 4">SLA 4</option></select></div>
+            <div><label className="block text-[11px] font-medium text-slate-muted mb-1">Pilih SLA</label><select value={sla} onChange={(e) => { setSla(e.target.value as SelectedSla); setTableUnit(''); setTrendUnit(''); }} className="border border-rule rounded-sm px-3 py-2 text-sm min-w-48"><option value="ALL">Semua SLA</option><option value="SLA 1">SLA 1</option><option value="SLA 2">SLA 2</option><option value="SLA 3">SLA 3</option><option value="SLA 4">SLA 4</option></select></div>
             <div><label className="block text-[11px] font-medium text-slate-muted mb-1">Dari Tgl Registrasi</label><input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="border border-rule rounded-sm px-3 py-2 text-sm" /></div>
             <div><label className="block text-[11px] font-medium text-slate-muted mb-1">Sampai Tgl Registrasi</label><input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="border border-rule rounded-sm px-3 py-2 text-sm" /></div>
             <button onClick={resetFilters} className="text-xs text-brass font-medium pb-2">Reset Filter</button>
             <span className="text-[11px] text-slate-muted pb-2">{sla === 'ALL' ? 'Dashboard menampilkan seluruh SLA yang tersedia.' : `Menampilkan dashboard ${sla}.`}</span>
           </div>
-          {sla4 && <p className="text-[11px] text-slate-muted mt-3">SLA 4 • Kalender terbaru dipakai dari database saat perhitungan.</p>}
+          {sla4 && <p className="text-[11px] text-slate-muted mt-3">SLA 4 • Kalender terbaru dipakai dari database saat perhitungan. SLA 3 dihitung pada import yang sama.</p>}
         </section>
 
         {sla === 'ALL' ? (
           <>
             <section><h3 className="font-serif text-lg font-semibold mb-3">Akumulasi Capaian SLA</h3><div className="grid md:grid-cols-3 gap-4">{SLA_CODES.map((code) => <SummaryCard key={code} label={`Capaian ${code}`} value={`${summaries[code].percentage}%`} sub={`On Time / Denominator: ${fmt(summaries[code].on_time)} / ${fmt(summaries[code].denominator)}`} dark />)}</div></section>
-            <UnitTable rows={combinedUnits} sla="ALL" unit={tableUnit} setUnit={setTableUnit} all />
+            <UnitTable rows={combinedUnits} sla="ALL" unit={tableUnit} setUnit={setTableUnit} all availableUnits={[...new Set([...(data.available_units ?? []), ...(sla4?.available_units ?? [])])]} />
           </>
         ) : (
           <>
             <section className="grid md:grid-cols-4 gap-4"><SummaryCard label={`Capaian ${selected}`} value={`${summaries[activeCode].percentage}%`} sub={`On Time / Denominator: ${fmt(summaries[activeCode].on_time)} / ${fmt(summaries[activeCode].denominator)}`} dark /><SummaryCard label="Total Arsip" value={fmt(summaries[activeCode].total_records)} /><SummaryCard label="On Time" value={fmt(summaries[activeCode].on_time)} tone="good" /><SummaryCard label="Out of Date" value={fmt(summaries[activeCode].out_of_date)} tone="bad" /></section>
             <StatusSync sla={activeCode} summary={summaries[activeCode]} />
-            <UnitTable rows={selectedRows} sla={activeCode} unit={tableUnit} setUnit={setTableUnit} all={false} />
+            <UnitTable rows={selectedRows} sla={activeCode} unit={tableUnit} setUnit={setTableUnit} all={false} availableUnits={activeCode === 'SLA 4' ? (sla4?.available_units ?? []) : (data.available_units ?? [])} />
             <UnitAchievementChart rows={selectedRows} />
             <RankingPanels top5={selectedRanking.top5} bottom5={selectedRanking.bottom5} title={activeCode} />
             <TrendFilter sla={activeCode} unit={trendUnit} setUnit={setTrendUnit} units={selected === 'SLA 4' ? (sla4?.available_units ?? []) : data.available_units} />

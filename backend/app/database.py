@@ -47,6 +47,17 @@ def ensure_schema():
         "sla2b_working_days": "INTEGER",
         "sla2_flow_stage": "VARCHAR(80)",
         "sla2_reason": "TEXT",
+        "sla3a_result": "VARCHAR(10)",
+        "sla3b_result": "VARCHAR(10)",
+        "sla3_final_result": "VARCHAR(10)",
+        "sla3_manual_result": "VARCHAR(10)",
+        "sla3_decision_source": "VARCHAR(80)",
+        "sla3_manual_rule": "VARCHAR(120)",
+        "sla3_working_days": "INTEGER",
+        "sla3a_working_days": "INTEGER",
+        "sla3b_working_days": "INTEGER",
+        "sla3_flow_stage": "VARCHAR(80)",
+        "sla3_reason": "TEXT",
     }
     with engine.begin() as conn:
         for name, ddl in additions.items():

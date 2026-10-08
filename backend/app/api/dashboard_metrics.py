@@ -29,11 +29,12 @@ def _result_expr(sla: str):
             (SLARecord.status.in_(["INCOMPLETE", "N/A"]), "N/A"),
             else_=SLARecord.status,
         )
+    result_field = SLARecord.sla2_final_result if sla == "SLA 2" else SLARecord.sla3_final_result
     return case(
-        (SLARecord.sla2_final_result.in_(["Yes", "ON TIME"]), "Yes"),
-        (SLARecord.sla2_final_result.in_(["No", "OUT OF DATE"]), "No"),
-        (SLARecord.sla2_final_result.in_(["N/A", "INCOMPLETE"]), "N/A"),
-        else_=SLARecord.sla2_final_result,
+        (result_field.in_(["Yes", "ON TIME"]), "Yes"),
+        (result_field.in_(["No", "OUT OF DATE"]), "No"),
+        (result_field.in_(["N/A", "INCOMPLETE"]), "N/A"),
+        else_=result_field,
     )
 
 
@@ -111,13 +112,22 @@ def build_dashboard(db: Session, start_date=None, end_date=None, sla="ALL", tabl
     base = _period_query(db, start_date, end_date)
     units = sorted([x[0] for x in base.with_entities(SLARecord.unit).distinct().all() if x[0]])
     selected = sla.upper().replace(" ", "")
-    selected_sla = "ALL" if selected in ("ALL", "SEMUA", "SEMUA SLA") else ("SLA 1" if selected in ("SLA1",) else "SLA 2")
+    if selected in ("ALL", "SEMUA", "SEMUA SLA"):
+        selected_sla = "ALL"
+    elif selected in ("SLA1",):
+        selected_sla = "SLA 1"
+    elif selected in ("SLA2",):
+        selected_sla = "SLA 2"
+    elif selected in ("SLA3",):
+        selected_sla = "SLA 3"
+    else:
+        selected_sla = "SLA 2"
 
     summaries = {}
     tables = {}
     rankings = {}
     trends = {}
-    for code in ("SLA 1", "SLA 2"):
+    for code in ("SLA 1", "SLA 2", "SLA 3"):
         result_col = _result_expr(code)
         q = base
         summaries[code] = _summary(q, result_col)
@@ -132,17 +142,20 @@ def build_dashboard(db: Session, start_date=None, end_date=None, sla="ALL", tabl
     if selected_sla == "ALL":
         s1 = {x["unit"]: x for x in tables["SLA 1"]}
         s2 = {x["unit"]: x for x in tables["SLA 2"]}
+        s3 = {x["unit"]: x for x in tables["SLA 3"]}
         if table_unit:
             unit_names = [table_unit]
         else:
-            unit_names = sorted(set(s1) | set(s2))
+            unit_names = sorted(set(s1) | set(s2) | set(s3))
         table = []
         for name in unit_names:
-            a, b = s1.get(name), s2.get(name)
+            a, b, c = s1.get(name), s2.get(name), s3.get(name)
+            zero = {"total": 0, "on_time": 0, "out_of_date": 0, "incomplete": 0, "percentage": 0}
             table.append({
                 "unit": name,
-                "sla1": a or {"total": 0, "on_time": 0, "out_of_date": 0, "incomplete": 0, "percentage": 0},
-                "sla2": b or {"total": 0, "on_time": 0, "out_of_date": 0, "incomplete": 0, "percentage": 0},
+                "sla1": a or zero,
+                "sla2": b or zero,
+                "sla3": c or zero,
             })
         trend_sla = "SLA 1"
     else:
