@@ -89,11 +89,11 @@ class SLA3Calculator:
         ad = cls._as_date(row.get("tanggal_jadwal_penjemputan"))
         aj = cls._as_date(row.get("tanggal_penjadwalan_inaktif_2"))
 
-        # Gate 1 & 2: Format Arsip Fisik, Document Type Inaktif / Aktif (dengan X & Y terisi)
+        # Gate 1 & 2: Format Arsip Fisik, Document Type Inaktif / Aktif
         if m != "fisik":
             return {"result": "N/A", "working_days": None, "reason": "SLA 3A: Format Arsip bukan Fisik."}
         if not (n == "inaktif" or (n == "aktif" and x is not None and y is not None)):
-            return {"result": "N/A", "working_days": None, "reason": "SLA 3A: Document Type tidak memenuhi gate Inaktif atau Aktif dengan tanggal/jam penjadwalan arsip inaktif terisi."}
+            return {"result": "N/A", "working_days": None, "reason": "SLA 3A: Document Type tidak memenuhi gate."}
         
         # Gate 3: Period Gate
         if p is None:
@@ -101,23 +101,23 @@ class SLA3Calculator:
         
         context["registration_date"] = p
         if not cls._period_gate(p, context):
-            return {"result": "N/A", "working_days": None, "reason": "SLA 3A: Tanggal Registrasi berada di luar period gate."}
+            return {"result": "N/A", "working_days": None, "reason": "SLA 3A: Tanggal Registrasi di luar period gate."}
 
-        # Prasyarat start/end harus tersedia sebelum short-circuit AJ.
+        # PERBAIKAN URUTAN: Pastikan START (X) dan END (AD) tersedia SEBELUM mengecek AJ
         if x is None or ad is None:
-            return {"result": "N/A", "working_days": None, "reason": "SLA 3A: Tanggal Penjadwalan Inaktif atau Tanggal Jadwal Penjemputan kosong."}
+            return {"result": "N/A", "working_days": None, "reason": "SLA 3A: Tanggal Penjadwalan Inaktif (X) atau Tanggal Jadwal Penjemputan (AD) kosong."}
 
-        # Short-circuit Yes jika Tanggal Penjadwalan Arsip Inaktif 2 tersedia.
+        # Short-Circuit Yes: Jika X dan AD sudah terisi, dan ternyata AJ juga terisi
         if aj is not None:
-            return {"result": "Yes", "working_days": None, "reason": "SLA 3A: Tanggal Penjadwalan Arsip Inaktif 2 terisi (Short-circuit Yes)."}
+            return {"result": "Yes", "working_days": None, "reason": "SLA 3A: Tanggal Penjadwalan Inaktif 2 (AJ) terisi (Short-circuit Yes)."}
 
         # Kalkulasi
         working_days = cls.networkdays(x, ad, context.get("holidays", [])) - 1
         threshold = cls._get_threshold(k)
 
         if working_days <= threshold:
-            return {"result": "Yes", "working_days": working_days, "reason": f"SLA 3A: NETWORKDAYS(Tanggal Penjadwalan Arsip Inaktif, Tanggal Jadwal Penjemputan)-1 = {working_days} <= threshold {threshold} hari."}
-        return {"result": "No", "working_days": working_days, "reason": f"SLA 3A: NETWORKDAYS(Tanggal Penjadwalan Arsip Inaktif, Tanggal Jadwal Penjemputan)-1 = {working_days} > threshold {threshold} hari."}
+            return {"result": "Yes", "working_days": working_days, "reason": f"SLA 3A: {working_days} hari <= threshold {threshold} hari."}
+        return {"result": "No", "working_days": working_days, "reason": f"SLA 3A: {working_days} hari > threshold {threshold} hari."}
 
     @classmethod
     def evaluate_sla_3b(cls, row: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
@@ -134,34 +134,33 @@ class SLA3Calculator:
         if m != "fisik":
             return {"result": "N/A", "working_days": None, "reason": "SLA 3B: Format Arsip bukan Fisik."}
         if not (n == "inaktif" or (n == "aktif" and x is not None and y is not None)):
-            return {"result": "N/A", "working_days": None, "reason": "SLA 3B: Document Type tidak memenuhi gate Inaktif atau Aktif dengan tanggal/jam penjadwalan arsip inaktif terisi."}
+            return {"result": "N/A", "working_days": None, "reason": "SLA 3B: Document Type tidak memenuhi gate."}
         if p is None:
             return {"result": "N/A", "working_days": None, "reason": "SLA 3B: Tanggal Registrasi tidak tersedia."}
 
         context["registration_date"] = p
         if not cls._period_gate(p, context):
-            return {"result": "N/A", "working_days": None, "reason": "SLA 3B: Tanggal Registrasi berada di luar period gate."}
+            return {"result": "N/A", "working_days": None, "reason": "SLA 3B: Tanggal Registrasi di luar period gate."}
 
         if aj is None or ad is None:
-            return {"result": "N/A", "working_days": None, "reason": "SLA 3B: Tanggal Penjadwalan Inaktif 2 (Tanggal Penjadwalan Arsip Inaktif 2) atau Tanggal Jadwal Penjemputan (Tanggal Jadwal Penjemputan) kosong."}
+            return {"result": "N/A", "working_days": None, "reason": "SLA 3B: AJ atau AD kosong."}
 
         # Kalkulasi
         working_days = cls.networkdays(aj, ad, context.get("holidays", [])) - 1
         threshold = cls._get_threshold(k)
 
         if working_days <= threshold:
-            return {"result": "Yes", "working_days": working_days, "reason": f"SLA 3B: NETWORKDAYS(Tanggal Penjadwalan Arsip Inaktif 2, Tanggal Jadwal Penjemputan)-1 = {working_days} <= threshold {threshold} hari."}
-        return {"result": "No", "working_days": working_days, "reason": f"SLA 3B: NETWORKDAYS(Tanggal Penjadwalan Arsip Inaktif 2, Tanggal Jadwal Penjemputan)-1 = {working_days} > threshold {threshold} hari."}
+            return {"result": "Yes", "working_days": working_days, "reason": f"SLA 3B: {working_days} hari <= threshold {threshold} hari."}
+        return {"result": "No", "working_days": working_days, "reason": f"SLA 3B: {working_days} hari > threshold {threshold} hari."}
 
     @classmethod
     def evaluate_vendor(cls, row: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """RAW -> header mapping -> SLA 3A + SLA 3B -> approved manual override -> final."""
-        
         a = cls.evaluate_sla_3a(row, context)
         b = cls.evaluate_sla_3b(row, context)
         a_result, b_result = a["result"], b["result"]
 
-        # 1. Jika salah satu formula menghasilkan Yes, final otomatis Yes.
+        # 1. Jika salah satu formula menghasilkan Yes
         if a_result == "Yes" or b_result == "Yes":
             selected = a if a_result == "Yes" else b
             source = "SLA 3A" if a_result == "Yes" else "SLA 3B"
@@ -175,7 +174,7 @@ class SLA3Calculator:
                 "working_days": selected.get("working_days"),
                 "sla_3a_working_days": a.get("working_days"),
                 "sla_3b_working_days": b.get("working_days"),
-                "reason": f"SLA 3 Final = Yes karena SLA 3A={a_result} atau SLA 3B={b_result}.",
+                "reason": f"SLA 3 Final = Yes karena {source} = Yes.",
                 "flow_stage": "FORMULA_YES",
             }
 
@@ -208,7 +207,7 @@ class SLA3Calculator:
             "working_days": b.get("working_days") if b_result == "No" else a.get("working_days"),
             "sla_3a_working_days": a.get("working_days"),
             "sla_3b_working_days": b.get("working_days"),
-            "reason": f"SLA 3 Final = {final}; SLA 3A={a_result}, SLA 3B={b_result}, manual SLA 3={manual.get('result')}.",
+            "reason": f"SLA 3 Final = {final}; SLA 3A={a_result}, SLA 3B={b_result}, manual={manual.get('result')}.",
             "flow_stage": "FINAL_NO" if final == "No" else "FINAL_NA",
         }
 

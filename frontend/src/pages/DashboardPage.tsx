@@ -104,8 +104,8 @@ function UnitTable({ rows, sla, unit, setUnit, all, availableUnits }: { rows: Da
   // Keep every unit in the selector even when the table is currently filtered
   // to a single unit, so users can switch directly from one unit to another.
   const options = [...new Set(availableUnits)].sort((a, b) => a.localeCompare(b));
-  const stat = (row: DashboardUnitRow, code: typeof SLA_CODES[number]) => {
-    const key = code === 'SLA 1' ? 'sla1' : code === 'SLA 2' ? 'sla2' : 'sla4';
+  const stat = (row: DashboardUnitRow, code: string) => {
+    const key = code === 'SLA 1' ? 'sla1' : code === 'SLA 2' ? 'sla2' : code === 'SLA 3' ? 'sla3' : 'sla4';
     // SLA 4 rows can arrive either in the unified shape (row.sla4) or in the
     // dedicated SLA 4 shape (total/denominator/on_time/...). Support both so
     // the shared Capaian SLA per Unit table renders the real SLA 4 values.

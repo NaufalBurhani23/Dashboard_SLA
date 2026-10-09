@@ -15,13 +15,7 @@ def _period_query(db: Session, start_date=None, end_date=None):
 
 
 def _result_expr(sla: str):
-    """Return a normalized Yes/No/N/A SQL expression for dashboard metrics.
-
-    SLA 1 stores its final dashboard status as ON TIME / OUT OF DATE /
-    INCOMPLETE, while SLA 2 stores Yes / No / N/A.  Normalize both here so
-    all downstream aggregation (summary, per-unit, and trend) uses the same
-    semantic status values without changing the stored SLA 1 result.
-    """
+    """Return a normalized Yes/No/N/A SQL expression for dashboard metrics."""
     if sla == "SLA 1":
         return case(
             (SLARecord.status.in_(["ON TIME", "Yes"]), "Yes"),
@@ -29,7 +23,18 @@ def _result_expr(sla: str):
             (SLARecord.status.in_(["INCOMPLETE", "N/A"]), "N/A"),
             else_=SLARecord.status,
         )
-    result_field = SLARecord.sla2_final_result if sla == "SLA 2" else SLARecord.sla3_final_result
+    
+    if sla == "SLA 3":
+        # KHUSUS SLA 3: Alihkan semua status "No" / "OUT OF DATE" menjadi "N/A" (Incomplete)
+        result_field = SLARecord.sla3_final_result
+        return case(
+            (result_field.in_(["Yes", "ON TIME"]), "Yes"),
+            (result_field.in_(["N/A", "INCOMPLETE", "No", "OUT OF DATE"]), "N/A"),
+            else_=result_field,
+        )
+
+    # Untuk SLA 2 tetap normal
+    result_field = SLARecord.sla2_final_result
     return case(
         (result_field.in_(["Yes", "ON TIME"]), "Yes"),
         (result_field.in_(["No", "OUT OF DATE"]), "No"),

@@ -3,6 +3,9 @@ from io import BytesIO
 from typing import Any, Dict, List, Optional, Tuple
 from openpyxl import load_workbook
 
+# Import kalkulator SLA 3
+from app.sla.sla3.calculator import SLA3Calculator
+
 
 def _raw(value):
     if value is None:
@@ -145,9 +148,6 @@ def build_period_context(reg_dates: List[date], holidays: List[date], cutoff: ti
     previous_last_working_day_2 = _last_weekday(prev_y, prev_m, 2)
     previous_last_working_day_3 = _last_weekday(prev_y, prev_m, 3)
 
-    # H-1/H-2/H-3 are ordinal labels for the last working days, not
-    # subtraction from a date. Keep both explicit terminology-aware keys and
-    # the formula aliases used by the vendor workbook.
     return {
         "current_last_working_day_1": current_last_working_day_1,
         "current_last_working_day_2": current_last_working_day_2,
@@ -176,7 +176,6 @@ def build_period_context(reg_dates: List[date], holidays: List[date], cutoff: ti
 def parse_registrasi_sheet(file_bytes: bytes, holidays: Optional[List[date]] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     wb = load_workbook(BytesIO(file_bytes), read_only=True, data_only=True)
     try:
-        # Cari sheet yang paling menyerupai raw registrasi berdasarkan header.
         candidates = []
         for ws in wb.worksheets:
             try:
@@ -223,6 +222,7 @@ def parse_registrasi_sheet(file_bytes: bytes, holidays: Optional[List[date]] = N
             ti2_d, ti2_t = val(row, "tanggal_penjadwalan_inaktif_2"), val(row, "jam_penjadwalan_inaktif_2")
             rr_d, rr_t = val(row, "tanggal_runner_record_center"), val(row, "jam_runner_record_center")
             barcode_d, barcode_t = val(row, "tanggal_registrasi_arsip_generate_barcode"), val(row, "jam_registrasi_arsip_generate_barcode")
+            
             records.append({
                 "sumber": _raw(val(row, "sumber")), "status_registrasi": _raw(val(row, "status_registrasi")),
                 "status_inisiasi": _raw(val(row, "status_inisiasi")), "posisi_data": _raw(val(row, "posisi_data")),
@@ -250,7 +250,18 @@ def parse_registrasi_sheet(file_bytes: bytes, holidays: Optional[List[date]] = N
                 "gagal_penjemputan_timestamp": _combine(gf_d, gf_t),
                 "penjadwalan_inaktif_2_timestamp": _combine(ti2_d, ti2_t),
             })
+        
+        # Build period context (sekarang kita punya H5, H6, H8, H9)
         context = build_period_context(reg_dates, holidays or [])
+
+        # --- EVALUASI SLA 3 PADA MASING-MASING RECORD ---
+        for rec in records:
+            sla3_eval = SLA3Calculator.evaluate_vendor(rec, context)
+            
+            # Titipkan hasil evaluasi di dalam dictionary untuk disimpan di rute API
+            rec["sla3_eval"] = sla3_eval
+            rec["sla3_dashboard_status"] = SLA3Calculator.to_dashboard_status(sla3_eval["result"])
+
         return records, context
     finally:
         wb.close()

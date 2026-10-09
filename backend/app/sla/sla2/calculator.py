@@ -213,11 +213,11 @@ class SLA2Calculator:
         # by an SLA 2A-style union gate.
         manual_a = apply_sla2a_manual_check(row, context) if a_result != "Yes" else {"result": "N/A", "rule_code": None, "reason": "SLA 2A formula sudah Yes."}
         manual_b = apply_sla2b_manual_check(row, context) if b_result != "Yes" else {"result": "N/A", "rule_code": None, "reason": "SLA 2B formula sudah Yes."}
-        manual_a_yes = manual_a.get("result") == "Yes"
-        manual_b_yes = manual_b.get("result") == "Yes"
+        manual_a_yes = manual_a.get('result') == "Yes"
+        manual_b_yes = manual_b.get('result') == "Yes"
 
         if manual_a_yes or manual_b_yes:
-            matched = [m for m in (manual_a, manual_b) if m.get("result") == "Yes"]
+            matched = [m for m in (manual_a, manual_b) if m.get('result') == "Yes"]
             rule_codes = [m.get("rule_code") for m in matched if m.get("rule_code")]
             reasons = [m.get("reason") for m in matched if m.get("reason")]
             if manual_a_yes and manual_b_yes:
@@ -251,7 +251,7 @@ class SLA2Calculator:
             "working_days": b.get("working_days") if b_result == "No" else a.get("working_days"),
             "sla_2a_working_days": a.get("working_days"),
             "sla_2b_working_days": b.get("working_days"),
-            "reason": f"SLA 2 Final = {final}; SLA 2A={a_result}, SLA 2B={b_result}, manual SLA 2A={manual_a.get("result")}, manual SLA 2B={manual_b.get("result") }.",
+            "reason": f"SLA 2 Final = {final}; SLA 2A={a_result}, SLA 2B={b_result}, manual SLA 2A={manual_a.get('result')}, manual SLA 2B={manual_b.get('result') }.",
             "flow_stage": "FINAL_NO" if final == "No" else "FINAL_NA",
         }
 
